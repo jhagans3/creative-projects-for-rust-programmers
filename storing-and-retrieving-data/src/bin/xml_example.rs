@@ -16,11 +16,23 @@ struct Sale {
     unit: String,
 }
 
+// indicates the current position of
+// the parsing in general. We can be
+// inside a product (InProduct),
+// inside a sale (InSale),
+// or outside of both (Other)
 enum LocationItem {
     Other,
     InProduct,
     InSale,
 }
+
+// If we are inside a product,
+// the LocationProduct enum indicates
+// the current position of parsing inside
+// the current product. This can be within
+// any of the allowed fields or outside of
+// all of them. Similar states happen for sales.
 enum LocationProduct {
     Other,
     InId,
@@ -42,12 +54,35 @@ fn main() {
     let mut location_product = LocationProduct::Other;
     let mut location_sale = LocationSale::Other;
     let pathname = std::env::args().nth(1).unwrap();
+
+    // These are initialized with default values.
+    // Whenever there are some characters available,
+    // they are stored in the corresponding field
+    // of the current struct see Ex 1.
+    // situation where the value of
+    // location_item is LocationItem::InProduct and the
+    // value of location_product is LocationProduct::InCategory
     let mut product: Product = Default::default();
     let mut sale: Sale = Default::default();
+
     let file = std::fs::File::open(pathname).unwrap();
     let file = std::io::BufReader::new(file);
+
+    // An object of the EventReader type scans the buffered file and it
+    // generates an event whenever a step is performed in the parsing.
+    // The application code handles these kinds of events according
+    // to their needs. The word event is used by this crate, but the
+    // word transition would probably be a better description
+    // of the data extracted by the parser.
     let parser = EventReader::new(file);
 
+    // XmlEvent::StartElement: Signals that an XML element is beginning.
+    // It is decorated by the name of the beginning element
+    // and the possible attributes of that element.
+    // XmlEvent::EndElement: Signals that an XML element is ending.
+    // It is decorated by the name of the ending element.
+    // XmlEvent::Characters: Signals that the textual contents
+    // of an element is available. It is decorated by that available text.
     for event in parser {
         match &location_item {
             LocationItem::Other => match event {
@@ -93,8 +128,16 @@ fn main() {
                     _ => {}
                 },
                 LocationProduct::InCategory => match event {
+                    // Ex 1. we are in a category of a product.
+                    // In this situation, there can be the name
+                    // of the category or the end of the category.
+                    // To get the name of the category
                     Ok(XmlEvent::Characters(characters)) => {
+                        // the characters variable gets the name of the
+                        // category and a clone of it is assigned to the
+                        // product.category field.
                         product.category = characters.clone();
+                        // Then, the name is printed to the console.
                         println!("Got product.category: {}.", characters);
                     }
                     Ok(XmlEvent::EndElement { .. }) => {
